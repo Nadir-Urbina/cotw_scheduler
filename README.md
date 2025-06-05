@@ -1,36 +1,200 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Prophetic Rooms Scheduler - Crest of the Wave
 
-## Getting Started
+A modern web application for scheduling 12-minute Prophetic Room sessions during the "Crest of the Wave" conference. Built with Next.js 15, Firebase, and Tailwind CSS.
 
-First, run the development server:
+## Features
+
+### 🌟 Core Features
+- **Bilingual Support**: Full English/Spanish interface
+- **Real-time Updates**: Live synchronization across all users using Firebase Firestore
+- **12-minute Time Slots**: Optimized scheduling with 12-minute intervals
+- **Three-day Schedule**: 
+  - Thursday July 10th: 3:00 PM - 6:00 PM
+  - Friday July 11th: 3:00 PM - 6:00 PM  
+  - Saturday July 12th: 2:00 PM - 6:00 PM
+- **Responsive Design**: Beautiful UI that works on all devices
+- **Form Validation**: Required fields and input validation
+
+### 👥 Public Features
+- Browse available time slots
+- Book appointments with contact information
+- View booking confirmations
+- Cancel existing bookings
+
+### 🔧 Staff Features
+- **Admin Authentication**: Secure staff login
+- **Booking Management**: View, edit, and delete all bookings
+- **Data Export**: Export booking data to CSV
+- **Real-time Statistics**: Live booking counts and availability
+- **Comprehensive Booking Table**: See all attendee details at a glance
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Database**: Firebase Firestore (real-time NoSQL database)
+- **Authentication**: Firebase Auth
+- **Language**: TypeScript
+- **State Management**: React hooks with custom Firebase hooks
+- **Notifications**: Sonner for toast notifications
+
+## Setup Instructions
+
+### 1. Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Firebase account
+
+### 2. Clone and Install
+
+```bash
+git clone <repository-url>
+cd prophetic_rooms_scheduler
+npm install
+```
+
+### 3. Firebase Setup
+
+1. **Create a Firebase Project**:
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Create a new project
+   - Enable Firestore Database
+   - Enable Authentication (Email/Password provider)
+
+2. **Get Firebase Configuration**:
+   - Go to Project Settings → General
+   - Scroll down to "Your apps" section
+   - Add a web app or select existing one
+   - Copy the Firebase config object
+
+3. **Environment Variables**:
+   Create a `.env.local` file in the root directory:
+
+```env
+# Firebase Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
+
+### 4. Firestore Security Rules
+
+Set up these security rules in Firebase Console → Firestore Database → Rules:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read access to schedule for all users
+    match /schedule/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+### 5. Authentication Setup
+
+1. **Create Staff User**:
+   - Go to Firebase Console → Authentication → Users
+   - Add a new user with email ending in `@crestofthewave.org`
+   - This email domain is configured for staff access
+
+2. **Update Staff Email Domain** (Optional):
+   - Edit `src/hooks/useAuth.ts` line with `isStaff` logic
+   - Change email domain pattern to match your organization
+
+### 6. Run the Application
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout with Toaster
+│   └── page.tsx           # Main application page
+├── components/
+│   ├── ui/                # shadcn/ui components
+│   └── AdminPanel.tsx     # Staff admin interface
+├── hooks/
+│   ├── useAuth.ts         # Firebase authentication hook
+│   └── useSchedule.ts     # Schedule management with Firestore
+└── lib/
+    └── firebase.ts        # Firebase configuration
+```
 
-## Learn More
+## Usage
 
-To learn more about Next.js, take a look at the following resources:
+### For Conference Attendees
+1. Visit the website
+2. Switch language using the toggle (English/Spanish)
+3. Browse available time slots across the three days
+4. Click on an available (green) slot to book
+5. Fill out the booking form with your details
+6. Confirm your booking
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### For Staff Members
+1. Click "Staff members only" button
+2. Log in with your `@crestofthewave.org` email
+3. Access the Admin tab for:
+   - View all bookings in a table format
+   - Export booking data to CSV
+   - Delete bookings if needed
+   - Real-time statistics dashboard
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Customization
 
-## Deploy on Vercel
+### Changing Time Slots
+Edit `src/hooks/useSchedule.ts`:
+- Modify `generateTimeSlots()` parameters
+- Update the schedule initialization in `initializeSchedule()`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Adding Languages
+1. Add translations to the `translations` object in components
+2. Update the language type and switch logic
+3. Add new translation keys as needed
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Modifying Schedule Dates
+Update the date objects in `src/hooks/useSchedule.ts` `translations` section.
+
+## Deployment
+
+### Vercel (Recommended)
+1. Push code to GitHub
+2. Connect repository to Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy automatically
+
+### Other Platforms
+The app can be deployed to any platform supporting Next.js:
+- Netlify
+- Railway
+- AWS Amplify
+- DigitalOcean App Platform
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is created for the "Crest of the Wave" conference. Please contact the organization for usage permissions.
+
+## Support
+
+For technical issues or questions, please contact the development team or create an issue in the repository.
