@@ -453,18 +453,18 @@ export default function PropheticRoomsScheduler() {
 
           <TabsContent value="schedule" className="space-y-6">
             {/* Stats - Mobile Optimized */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-6 max-w-lg mx-auto">
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-indigo-600">{getTotalBookedSlots()}</div>
-                <div className="text-xs sm:text-sm text-gray-500">{t.booked}</div>
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 max-w-lg mx-auto mb-4">
+              <div className="text-center bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-indigo-100">
+                <div className="text-xl sm:text-2xl font-bold text-indigo-600 mb-1">{getTotalBookedSlots()}</div>
+                <div className="text-xs sm:text-sm text-gray-600 font-medium">{t.booked}</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-green-600">{getTotalSlots() - getTotalBookedSlots()}</div>
-                <div className="text-xs sm:text-sm text-gray-500">{t.available}</div>
+              <div className="text-center bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-green-100">
+                <div className="text-xl sm:text-2xl font-bold text-green-600 mb-1">{getTotalSlots() - getTotalBookedSlots()}</div>
+                <div className="text-xs sm:text-sm text-gray-600 font-medium">{t.available}</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-gray-600">{getTotalSlots()}</div>
-                <div className="text-xs sm:text-sm text-gray-500">{t.totalSlots}</div>
+              <div className="text-center bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
+                <div className="text-xl sm:text-2xl font-bold text-gray-600 mb-1">{getTotalSlots()}</div>
+                <div className="text-xs sm:text-sm text-gray-600 font-medium">{t.totalSlots}</div>
               </div>
             </div>
 
@@ -494,26 +494,29 @@ export default function PropheticRoomsScheduler() {
                         <Button
                           key={slot.id}
                           variant={slot.isBooked ? "secondary" : "outline"}
-                          className={`justify-start h-auto p-3 text-left ${
+                          className={`justify-start h-auto min-h-[60px] sm:min-h-[48px] p-3 sm:p-3 text-left touch-manipulation ${
                             slot.isBooked
-                              ? "bg-red-50 border-red-200 hover:bg-red-100"
-                              : "bg-green-50 border-green-200 hover:bg-green-100"
+                              ? "bg-red-50 border-red-200 hover:bg-red-100 active:bg-red-200"
+                              : "bg-green-50 border-green-200 hover:bg-green-100 active:bg-green-200"
                           }`}
                           onClick={() => handleSlotClick(day.id, slot.id)}
                         >
                           <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 flex-shrink-0" />
-                              <span className="font-medium text-sm sm:text-base">{slot.time}</span>
+                            <div className="flex items-center gap-2 sm:gap-2">
+                              <Clock className="w-4 h-4 sm:w-4 sm:h-4 flex-shrink-0 text-gray-600" />
+                              <span className="font-semibold text-base sm:text-base text-gray-900">{slot.time}</span>
                             </div>
-                            <Badge variant={slot.isBooked ? "destructive" : "default"} className="text-xs">
+                            <Badge 
+                              variant={slot.isBooked ? "destructive" : "default"} 
+                              className="text-xs sm:text-xs px-2 py-1 font-medium"
+                            >
                               {slot.isBooked ? t.booked : t.available}
                             </Badge>
                           </div>
                           {slot.isBooked && slot.attendee && (
-                            <div className="flex items-center gap-1 mt-1 text-xs sm:text-sm text-gray-600">
-                              <User className="w-3 h-3" />
-                              <span className="truncate">{slot.attendee.name}</span>
+                            <div className="flex items-center gap-1 mt-2 text-sm sm:text-sm text-gray-600">
+                              <User className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate font-medium">{slot.attendee.name}</span>
                             </div>
                           )}
                         </Button>
@@ -530,37 +533,43 @@ export default function PropheticRoomsScheduler() {
           </TabsContent>
         </Tabs>
 
-        {/* Booking Dialog */}
+        {/* Booking Dialog - Mobile Optimized */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md mx-4 w-full max-w-[95vw] sm:mx-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg">{currentSlot?.isBooked ? t.bookingDetails : t.bookSlot}</DialogTitle>
-              <DialogDescription className="text-sm">
+          <DialogContent className="sm:max-w-md w-[95vw] sm:w-full max-w-[95vw] sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-base sm:text-lg font-semibold leading-tight">
+                {currentSlot?.isBooked ? t.bookingDetails : t.bookSlot}
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm leading-relaxed">
                 {selectedDay && currentSlot && currentRoom && (
                   <>
-                    <span className="font-medium">{currentRoom.name}</span> - {selectedDay.dayName}, {selectedDay.date}
+                    <span className="font-medium text-indigo-600">{currentRoom.name}</span>
+                    <br className="sm:hidden" /><span className="hidden sm:inline"> - </span>
+                    <span className="font-medium">{selectedDay.dayName}</span>, {selectedDay.date}
                     <br />
-                    {t.time}: {currentSlot.time}
+                    <span className="text-gray-600">{t.time}:</span> <span className="font-semibold text-indigo-700">{currentSlot.time}</span>
                   </>
                 )}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name" className="text-sm">{t.fullName} *</Label>
+            <div className="grid gap-3 sm:gap-4 py-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  {t.fullName} <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder={t.enterFullName}
                   disabled={currentSlot?.isBooked || isProcessing}
-                  className="text-sm"
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="email" className="text-sm">{t.email}</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700">{t.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -568,44 +577,45 @@ export default function PropheticRoomsScheduler() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder={t.enterEmail}
                   disabled={currentSlot?.isBooked || isProcessing}
-                  className="text-sm"
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="phone" className="text-sm">{t.phone}</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">{t.phone}</Label>
                 <Input
                   id="phone"
+                  type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder={t.enterPhone}
                   disabled={currentSlot?.isBooked || isProcessing}
-                  className="text-sm"
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="notes" className="text-sm">{t.notes}</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="notes" className="text-sm font-medium text-gray-700">{t.notes}</Label>
                 <Textarea
                   id="notes"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder={t.specialRequests}
                   disabled={currentSlot?.isBooked || isProcessing}
-                  rows={3}
-                  className="text-sm"
+                  rows={2}
+                  className="text-base sm:text-sm min-h-[60px] resize-none"
                 />
               </div>
             </div>
 
-            <DialogFooter className="gap-2 flex-col sm:flex-row">
+            <DialogFooter className="gap-3 pt-4 flex-col sm:flex-row">
               {currentSlot?.isBooked ? (
                 <>
                   <Button 
                     variant="outline" 
                     onClick={() => setIsDialogOpen(false)}
                     disabled={isProcessing}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-2 sm:order-1"
                   >
                     {t.close}
                   </Button>
@@ -613,7 +623,7 @@ export default function PropheticRoomsScheduler() {
                     variant="destructive" 
                     onClick={handleCancelBookingRequest}
                     disabled={isProcessing}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-1 sm:order-2"
                   >
                     {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     {isProcessing ? t.processing : t.cancelBooking}
@@ -625,14 +635,14 @@ export default function PropheticRoomsScheduler() {
                     variant="outline" 
                     onClick={() => setIsDialogOpen(false)}
                     disabled={isProcessing}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-2 sm:order-1"
                   >
                     {t.cancel}
                   </Button>
                   <Button 
                     onClick={handleBookSlotRequest} 
                     disabled={!formData.name.trim() || isProcessing}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-1 sm:order-2 bg-indigo-600 hover:bg-indigo-700"
                   >
                     {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     {isProcessing ? t.processing : t.book}

@@ -129,22 +129,22 @@ export function PasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md mx-4 w-full max-w-[95vw] sm:mx-auto">
+      <DialogContent className="sm:max-w-md w-[95vw] sm:w-full max-w-[95vw] sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Lock className="w-5 h-5" />
+          <DialogHeader className="pb-4">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold leading-tight">
+              <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
               {title}
             </DialogTitle>
-            <DialogDescription className="text-sm">
+            <DialogDescription className="text-xs sm:text-sm leading-relaxed text-gray-600">
               {description}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="author-name" className="text-sm">
-                {t.authorName} *
+          <div className="grid gap-3 sm:gap-4 py-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="author-name" className="text-sm font-medium text-gray-700">
+                {t.authorName} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="author-name"
@@ -153,17 +153,17 @@ export function PasswordDialog({
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder={t.namePlaceholder}
                 disabled={isVerifying}
-                className="text-sm"
+                className="text-base sm:text-sm h-11 sm:h-10"
                 autoComplete="name"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 leading-relaxed">
                 {t.enterName}
               </p>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="access-code" className="text-sm">
-                {isCancellation ? t.cancellationCode : t.accessCode} *
+            <div className="grid gap-1.5">
+              <Label htmlFor="access-code" className="text-sm font-medium text-gray-700">
+                {isCancellation ? t.cancellationCode : t.accessCode} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="access-code"
@@ -172,38 +172,38 @@ export function PasswordDialog({
                 onChange={(e) => setCode(e.target.value)}
                 placeholder={t.codePlaceholder}
                 disabled={isVerifying}
-                className="text-sm"
+                className="text-base sm:text-sm h-11 sm:h-10 font-mono"
                 autoComplete="off"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 leading-relaxed">
                 {isCancellation ? t.enterCancellationCode : t.enterCode}
               </p>
             </div>
 
             {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-sm text-red-700">
                   {error}
                 </AlertDescription>
               </Alert>
             )}
           </div>
 
-          <DialogFooter className="gap-2 flex-col sm:flex-row">
+          <DialogFooter className="gap-3 pt-4 flex-col sm:flex-row">
             <Button 
               type="button"
               variant="outline" 
               onClick={handleClose}
               disabled={isVerifying}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-2 sm:order-1"
             >
               {t.cancel}
             </Button>
             <Button 
               type="submit"
               disabled={!code.trim() || !authorName.trim() || isVerifying}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-1 sm:order-2 bg-indigo-600 hover:bg-indigo-700"
             >
               {isVerifying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isVerifying ? t.verifying : t.verify}
