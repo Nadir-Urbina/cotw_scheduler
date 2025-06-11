@@ -22,13 +22,16 @@ interface PasswordDialogProps {
   title: string;
   description: string;
   language: 'en' | 'es';
+  type?: 'book' | 'cancel';
 }
 
 const translations = {
   en: {
     accessCode: "Access Code",
+    cancellationCode: "Cancellation Code",
     authorName: "Your Name",
     enterCode: "Enter reservation code",
+    enterCancellationCode: "Enter cancellation code",
     enterName: "Enter your full name for accountability",
     codePlaceholder: "Enter code...",
     namePlaceholder: "Enter your name...",
@@ -36,13 +39,16 @@ const translations = {
     cancel: "Cancel",
     verifying: "Verifying...",
     invalidCode: "Invalid access code. Please try again.",
+    invalidCancellationCode: "Invalid cancellation code. Please try again.",
     errorValidating: "Error validating code. Please try again.",
     nameRequired: "Name is required for accountability purposes.",
   },
   es: {
     accessCode: "Código de Acceso",
+    cancellationCode: "Código de Cancelación",
     authorName: "Su Nombre",
     enterCode: "Ingrese el código de reserva",
+    enterCancellationCode: "Ingrese el código de cancelación",
     enterName: "Ingrese su nombre completo para fines de responsabilidad",
     codePlaceholder: "Ingrese código...",
     namePlaceholder: "Ingrese su nombre...",
@@ -50,6 +56,7 @@ const translations = {
     cancel: "Cancelar",
     verifying: "Verificando...",
     invalidCode: "Código de acceso inválido. Por favor intente de nuevo.",
+    invalidCancellationCode: "Código de cancelación inválido. Por favor intente de nuevo.",
     errorValidating: "Error al validar código. Por favor intente de nuevo.",
     nameRequired: "El nombre es requerido para fines de responsabilidad.",
   },
@@ -61,7 +68,8 @@ export function PasswordDialog({
   onSuccess, 
   title, 
   description, 
-  language 
+  language,
+  type = 'book'
 }: PasswordDialogProps) {
   const [code, setCode] = useState('');
   const [authorName, setAuthorName] = useState('');
@@ -69,6 +77,7 @@ export function PasswordDialog({
   const [error, setError] = useState<string | null>(null);
 
   const t = translations[language];
+  const isCancellation = type === 'cancel';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +97,10 @@ export function PasswordDialog({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code: code.trim() }),
+        body: JSON.stringify({ 
+          code: code.trim(), 
+          type: type 
+        }),
       });
 
       const data = await response.json();
@@ -99,7 +111,7 @@ export function PasswordDialog({
         onSuccess(authorName.trim());
         onOpenChange(false);
       } else {
-        setError(t.invalidCode);
+        setError(isCancellation ? t.invalidCancellationCode : t.invalidCode);
       }
     } catch (error) {
       setError(t.errorValidating);
@@ -151,7 +163,7 @@ export function PasswordDialog({
 
             <div className="grid gap-2">
               <Label htmlFor="access-code" className="text-sm">
-                {t.accessCode} *
+                {isCancellation ? t.cancellationCode : t.accessCode} *
               </Label>
               <Input
                 id="access-code"
@@ -164,7 +176,7 @@ export function PasswordDialog({
                 autoComplete="off"
               />
               <p className="text-xs text-gray-500">
-                {t.enterCode}
+                {isCancellation ? t.enterCancellationCode : t.enterCode}
               </p>
             </div>
 

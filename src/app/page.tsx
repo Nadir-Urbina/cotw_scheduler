@@ -651,6 +651,7 @@ export default function PropheticRoomsScheduler() {
           title={t.accessRequired}
           description={pendingAction === 'book' ? t.accessRequiredForBooking : t.accessRequiredForCancellation}
           language={language}
+          type={pendingAction || 'book'}
         />
       </div>
     </div>

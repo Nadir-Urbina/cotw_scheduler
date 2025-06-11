@@ -78,6 +78,10 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Access Codes
+RESERVATION_CODE=your_booking_access_code
+CANCELLATION_CODE=your_cancellation_access_code
 ```
 
 ### 4. Firestore Security Rules
@@ -142,7 +146,10 @@ src/
 3. Browse available time slots across the three days
 4. Click on an available (green) slot to book
 5. Fill out the booking form with your details
-6. Confirm your booking
+6. Enter the **reservation access code** when prompted
+7. Confirm your booking
+
+**Note**: Booking requires an access code (`RESERVATION_CODE`) for security. Cancelling bookings requires a separate cancellation code (`CANCELLATION_CODE`).
 
 ### For Staff Members
 1. Click "Staff members only" button

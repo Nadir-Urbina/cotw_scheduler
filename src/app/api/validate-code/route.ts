@@ -2,20 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { code } = await request.json();
+    const { code, type } = await request.json();
     
-    // Get the reservation code from environment variables
-    const reservationCode = process.env.RESERVATION_CODE;
+    // Get the appropriate code from environment variables
+    let validCode: string | undefined;
     
-    if (!reservationCode) {
+    if (type === 'cancel') {
+      validCode = process.env.CANCELLATION_CODE;
+    } else {
+      // Default to reservation code for booking
+      validCode = process.env.RESERVATION_CODE;
+    }
+    
+    if (!validCode) {
       return NextResponse.json(
-        { error: 'Reservation code not configured' },
+        { error: `${type === 'cancel' ? 'Cancellation' : 'Reservation'} code not configured` },
         { status: 500 }
       );
     }
     
     // Validate the provided code
-    const isValid = code === reservationCode;
+    const isValid = code === validCode;
     
     return NextResponse.json({ valid: isValid });
   } catch (error) {
