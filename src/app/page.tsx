@@ -494,31 +494,33 @@ export default function PropheticRoomsScheduler() {
                         <Button
                           key={slot.id}
                           variant={slot.isBooked ? "secondary" : "outline"}
-                          className={`justify-start h-auto min-h-[60px] sm:min-h-[48px] p-3 sm:p-3 text-left touch-manipulation ${
+                          className={`justify-start h-auto min-h-[60px] sm:min-h-[48px] p-3 sm:p-3 text-left touch-manipulation overflow-hidden ${
                             slot.isBooked
                               ? "bg-red-50 border-red-200 hover:bg-red-100 active:bg-red-200"
                               : "bg-green-50 border-green-200 hover:bg-green-100 active:bg-green-200"
                           }`}
                           onClick={() => handleSlotClick(day.id, slot.id)}
                         >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-2 sm:gap-2">
-                              <Clock className="w-4 h-4 sm:w-4 sm:h-4 flex-shrink-0 text-gray-600" />
-                              <span className="font-semibold text-base sm:text-base text-gray-900">{slot.time}</span>
+                          <div className="flex flex-col w-full min-w-0">
+                            <div className="flex items-center justify-between w-full mb-1">
+                              <div className="flex items-center gap-2 sm:gap-2 min-w-0">
+                                <Clock className="w-4 h-4 sm:w-4 sm:h-4 flex-shrink-0 text-gray-600" />
+                                <span className="font-semibold text-base sm:text-base text-gray-900 whitespace-nowrap">{slot.time}</span>
+                              </div>
+                              <Badge 
+                                variant={slot.isBooked ? "destructive" : "default"} 
+                                className="text-xs sm:text-xs px-2 py-1 font-medium flex-shrink-0 ml-2"
+                              >
+                                {slot.isBooked ? t.booked : t.available}
+                              </Badge>
                             </div>
-                            <Badge 
-                              variant={slot.isBooked ? "destructive" : "default"} 
-                              className="text-xs sm:text-xs px-2 py-1 font-medium"
-                            >
-                              {slot.isBooked ? t.booked : t.available}
-                            </Badge>
+                            {slot.isBooked && slot.attendee && (
+                              <div className="flex items-center gap-1 text-sm sm:text-sm text-gray-600 min-w-0">
+                                <User className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate font-medium min-w-0">{slot.attendee.name}</span>
+                              </div>
+                            )}
                           </div>
-                          {slot.isBooked && slot.attendee && (
-                            <div className="flex items-center gap-1 mt-2 text-sm sm:text-sm text-gray-600">
-                              <User className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate font-medium">{slot.attendee.name}</span>
-                            </div>
-                          )}
                         </Button>
                       ))}
                     </div>
