@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -26,7 +26,7 @@ import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, User, Languages, Loader2, AlertCircle, Settings, DoorOpen } from "lucide-react"
+import { Calendar, Clock, User, Languages, Loader2, AlertCircle, Settings, DoorOpen, Info } from "lucide-react"
 import { useSchedule } from "@/hooks/useSchedule"
 import { AdminPanel } from "@/components/AdminPanel"
 import { PasswordDialog } from "@/components/PasswordDialog"
@@ -77,6 +77,11 @@ const translations = {
     accessRequired: "Access Code Required",
     accessRequiredForBooking: "Please enter the access code to make a reservation.",
     accessRequiredForCancellation: "Please enter the access code to cancel this reservation.",
+    duplicateWarning: "Similar Name Found",
+    duplicateFound: "We found a similar booking:",
+    duplicateFoundMultiple: "We found similar bookings:",
+    duplicateDetails: "in {room} on {day} at {time}",
+    duplicateNote: "Please verify this is not a duplicate booking.",
   },
   es: {
     title: "Crest of the Wave",
@@ -119,6 +124,11 @@ const translations = {
     accessRequired: "Código de Acceso Requerido",
     accessRequiredForBooking: "Por favor ingrese el código de acceso para hacer una reserva.",
     accessRequiredForCancellation: "Por favor ingrese el código de acceso para cancelar esta reserva.",
+    duplicateWarning: "Nombre Similar Encontrado",
+    duplicateFound: "Encontramos una reserva similar:",
+    duplicateFoundMultiple: "Encontramos reservas similares:",
+    duplicateDetails: "en {room} el {day} a las {time}",
+    duplicateNote: "Por favor verifique que no sea una reserva duplicada.",
   },
 }
 
@@ -145,8 +155,20 @@ export default function PropheticRoomsScheduler() {
     loading, 
     error, 
     bookSlot, 
-    cancelBooking 
+    cancelBooking,
+    findPotentialDuplicates
   } = useSchedule(language)
+  
+  const [duplicates, setDuplicates] = useState<Array<{
+    roomId: string;
+    roomName: string;
+    dayId: string;
+    dayName: string;
+    slotId: string;
+    slotTime: string;
+    attendeeName: string;
+    similarity: number;
+  }>>([])
   
   const t = translations[language]
   const currentRoom = rooms.find(r => r.id === currentRoomId)
@@ -182,6 +204,7 @@ export default function PropheticRoomsScheduler() {
       })
     }
     setSelectedSlot({ dayId, slotId })
+    setDuplicates([])
     setIsDialogOpen(true)
   }
 
@@ -332,6 +355,22 @@ export default function PropheticRoomsScheduler() {
   const selectedDay = selectedSlot 
     ? schedule.find(d => d.id === selectedSlot.dayId)
     : null
+
+  // Check for duplicates when name changes
+  useEffect(() => {
+    if (!formData.name || formData.name.trim().length < 3 || currentSlot?.isBooked) {
+      setDuplicates([])
+      return
+    }
+
+    // Debounce the duplicate check to prevent excessive calls
+    const timeoutId = setTimeout(() => {
+      const foundDuplicates = findPotentialDuplicates(formData.name)
+      setDuplicates(foundDuplicates)
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [formData.name, currentSlot?.isBooked])
 
   if (loading) {
     return (
@@ -536,7 +575,12 @@ export default function PropheticRoomsScheduler() {
         </Tabs>
 
         {/* Booking Dialog - Mobile Optimized */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) {
+            setDuplicates([]) // Clear duplicates when dialog is closed
+          }
+        }}>
           <DialogContent className="sm:max-w-md w-[95vw] sm:w-full max-w-[95vw] sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader className="pb-4">
               <DialogTitle className="text-base sm:text-lg font-semibold leading-tight">
@@ -568,6 +612,40 @@ export default function PropheticRoomsScheduler() {
                   disabled={currentSlot?.isBooked || isProcessing}
                   className="text-base sm:text-sm h-11 sm:h-10"
                 />
+                
+                {/* Duplicate Warning */}
+                {duplicates.length > 0 && !currentSlot?.isBooked && (
+                  <Alert className="mt-2 border-amber-200 bg-amber-50">
+                    <Info className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-sm">
+                      <div className="font-medium text-amber-800 mb-1">
+                        {t.duplicateWarning}
+                      </div>
+                      <div className="text-amber-700 mb-2">
+                        {duplicates.length === 1 ? t.duplicateFound : t.duplicateFoundMultiple}
+                      </div>
+                      <div className="space-y-1">
+                        {duplicates.slice(0, 3).map((duplicate, index) => (
+                          <div key={index} className="text-xs text-amber-600">
+                            <span className="font-medium">{duplicate.attendeeName}</span>{" "}
+                            {t.duplicateDetails
+                              .replace("{room}", duplicate.roomName)
+                              .replace("{day}", duplicate.dayName)
+                              .replace("{time}", duplicate.slotTime)}
+                          </div>
+                        ))}
+                        {duplicates.length > 3 && (
+                          <div className="text-xs text-amber-600 italic">
+                            +{duplicates.length - 3} more...
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-amber-700 mt-2 text-xs">
+                        {t.duplicateNote}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               <div className="grid gap-1.5">

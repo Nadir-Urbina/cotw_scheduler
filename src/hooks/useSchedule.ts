@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   collection, 
   doc, 
@@ -402,6 +402,86 @@ export const useSchedule = (language: 'en' | 'es') => {
   const currentRoom = rooms.find(r => r.id === currentRoomId);
   const schedule = currentRoom?.schedule || [];
 
+  // Function to find potential duplicate bookings
+  const findPotentialDuplicates = (searchName: string) => {
+    if (!searchName || searchName.trim().length < 3) return [];
+    
+    const duplicates: Array<{
+      roomId: string;
+      roomName: string;
+      dayId: string;
+      dayName: string;
+      slotId: string;
+      slotTime: string;
+      attendeeName: string;
+      similarity: number;
+    }> = [];
+
+    const normalizedSearchName = searchName.toLowerCase().trim();
+    
+    // Helper function to calculate similarity between two strings
+    const calculateSimilarity = (str1: string, str2: string): number => {
+      const s1 = str1.toLowerCase().trim();
+      const s2 = str2.toLowerCase().trim();
+      
+      // Exact match
+      if (s1 === s2) return 1.0;
+      
+      // Check if one contains the other
+      if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+      
+      // Simple word-based similarity
+      const words1 = s1.split(/\s+/);
+      const words2 = s2.split(/\s+/);
+      
+      let matchingWords = 0;
+      const totalWords = Math.max(words1.length, words2.length);
+      
+      words1.forEach(word1 => {
+        if (words2.some(word2 => 
+          word1 === word2 || 
+          word1.includes(word2) || 
+          word2.includes(word1) ||
+          // Handle common name variations
+          (word1.replace(/[áàäâ]/g, 'a').replace(/[éèëê]/g, 'e').replace(/[íìïî]/g, 'i').replace(/[óòöô]/g, 'o').replace(/[úùüû]/g, 'u') === 
+           word2.replace(/[áàäâ]/g, 'a').replace(/[éèëê]/g, 'e').replace(/[íìïî]/g, 'i').replace(/[óòöô]/g, 'o').replace(/[úùüû]/g, 'u'))
+        )) {
+          matchingWords++;
+        }
+      });
+      
+      return matchingWords / totalWords;
+    };
+
+    // Search through all rooms and their schedules
+    rooms.forEach(room => {
+      room.schedule.forEach(day => {
+        day.slots.forEach(slot => {
+          if (slot.isBooked && slot.attendee) {
+            const similarity = calculateSimilarity(normalizedSearchName, slot.attendee.name);
+            
+            // Consider it a potential duplicate if similarity is above 0.6
+            if (similarity > 0.6) {
+              duplicates.push({
+                roomId: room.id,
+                roomName: room.name,
+                dayId: day.id,
+                dayName: day.dayName,
+                slotId: slot.id,
+                slotTime: slot.time,
+                attendeeName: slot.attendee.name,
+                similarity
+              });
+            }
+          }
+        });
+      });
+    });
+
+    // Sort by similarity (highest first)
+    return duplicates.sort((a, b) => b.similarity - a.similarity);
+  };
+
   return {
     rooms,
     currentRoomId,
@@ -411,5 +491,6 @@ export const useSchedule = (language: 'en' | 'es') => {
     error,
     bookSlot,
     cancelBooking,
+    findPotentialDuplicates,
   };
 }; 
