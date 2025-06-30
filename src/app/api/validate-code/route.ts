@@ -7,7 +7,8 @@ export async function POST(request: NextRequest) {
     // Get the appropriate code from environment variables
     let validCode: string | undefined;
     
-    if (type === 'cancel') {
+    if (type === 'cancel' || type === 'edit') {
+      // Both cancellation and editing use the same code for security
       validCode = process.env.CANCELLATION_CODE;
     } else {
       // Default to reservation code for booking
@@ -15,8 +16,9 @@ export async function POST(request: NextRequest) {
     }
     
     if (!validCode) {
+      const codeType = type === 'cancel' ? 'Cancellation' : type === 'edit' ? 'Edit' : 'Reservation';
       return NextResponse.json(
-        { error: `${type === 'cancel' ? 'Cancellation' : 'Reservation'} code not configured` },
+        { error: `${codeType} code not configured` },
         { status: 500 }
       );
     }

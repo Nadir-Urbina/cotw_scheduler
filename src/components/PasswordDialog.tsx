@@ -22,16 +22,18 @@ interface PasswordDialogProps {
   title: string;
   description: string;
   language: 'en' | 'es';
-  type?: 'book' | 'cancel';
+  type?: 'book' | 'cancel' | 'edit';
 }
 
 const translations = {
   en: {
     accessCode: "Access Code",
     cancellationCode: "Cancellation Code",
+    editCode: "Edit Access Code",
     authorName: "Your Name",
     enterCode: "Enter reservation code",
     enterCancellationCode: "Enter cancellation code",
+    enterEditCode: "Enter edit access code",
     enterName: "Enter your full name for accountability",
     codePlaceholder: "Enter code...",
     namePlaceholder: "Enter your name...",
@@ -40,15 +42,18 @@ const translations = {
     verifying: "Verifying...",
     invalidCode: "Invalid access code. Please try again.",
     invalidCancellationCode: "Invalid cancellation code. Please try again.",
+    invalidEditCode: "Invalid edit access code. Please try again.",
     errorValidating: "Error validating code. Please try again.",
     nameRequired: "Name is required for accountability purposes.",
   },
   es: {
     accessCode: "Código de Acceso",
     cancellationCode: "Código de Cancelación",
+    editCode: "Código de Edición",
     authorName: "Su Nombre",
     enterCode: "Ingrese el código de reserva",
     enterCancellationCode: "Ingrese el código de cancelación",
+    enterEditCode: "Ingrese el código de edición",
     enterName: "Ingrese su nombre completo para fines de responsabilidad",
     codePlaceholder: "Ingrese código...",
     namePlaceholder: "Ingrese su nombre...",
@@ -57,6 +62,7 @@ const translations = {
     verifying: "Verificando...",
     invalidCode: "Código de acceso inválido. Por favor intente de nuevo.",
     invalidCancellationCode: "Código de cancelación inválido. Por favor intente de nuevo.",
+    invalidEditCode: "Código de edición inválido. Por favor intente de nuevo.",
     errorValidating: "Error al validar código. Por favor intente de nuevo.",
     nameRequired: "El nombre es requerido para fines de responsabilidad.",
   },
@@ -78,6 +84,7 @@ export function PasswordDialog({
 
   const t = translations[language];
   const isCancellation = type === 'cancel';
+  const isEdit = type === 'edit';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +118,13 @@ export function PasswordDialog({
         onSuccess(authorName.trim());
         onOpenChange(false);
       } else {
-        setError(isCancellation ? t.invalidCancellationCode : t.invalidCode);
+        if (isCancellation) {
+          setError(t.invalidCancellationCode);
+        } else if (isEdit) {
+          setError(t.invalidEditCode);
+        } else {
+          setError(t.invalidCode);
+        }
       }
     } catch (error) {
       setError(t.errorValidating);
@@ -163,7 +176,7 @@ export function PasswordDialog({
 
             <div className="grid gap-1.5">
               <Label htmlFor="access-code" className="text-sm font-medium text-gray-700">
-                {isCancellation ? t.cancellationCode : t.accessCode} <span className="text-red-500">*</span>
+                {isCancellation ? t.cancellationCode : isEdit ? t.editCode : t.accessCode} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="access-code"
@@ -176,7 +189,7 @@ export function PasswordDialog({
                 autoComplete="off"
               />
               <p className="text-xs text-gray-500 leading-relaxed">
-                {isCancellation ? t.enterCancellationCode : t.enterCode}
+                {isCancellation ? t.enterCancellationCode : isEdit ? t.enterEditCode : t.enterCode}
               </p>
             </div>
 

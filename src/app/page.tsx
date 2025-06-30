@@ -26,7 +26,7 @@ import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, User, Languages, Loader2, AlertCircle, Settings, DoorOpen, Info } from "lucide-react"
+import { Calendar, Clock, User, Languages, Loader2, AlertCircle, Settings, DoorOpen, Info, Search, X } from "lucide-react"
 import { useSchedule } from "@/hooks/useSchedule"
 import { AdminPanel } from "@/components/AdminPanel"
 import { PasswordDialog } from "@/components/PasswordDialog"
@@ -46,12 +46,14 @@ const translations = {
     totalSlots: "Total Slots",
     bookSlot: "Book Time Slot",
     bookingDetails: "Booking Details",
+    editBooking: "Edit Reservation",
     fullName: "Full Name",
     email: "Email",
     phone: "Phone Number",
     notes: "Notes (Optional)",
     specialRequests: "Any special requests or notes",
     book: "Book Slot",
+    update: "Update Reservation",
     cancel: "Cancel",
     close: "Close",
     cancelBooking: "Cancel Booking",
@@ -65,18 +67,27 @@ const translations = {
     loading: "Loading schedule...",
     error: "Error loading schedule",
     bookingSuccess: "Slot booked successfully!",
+    editSuccess: "Reservation updated successfully!",
     cancellationSuccess: "Booking cancelled successfully!",
     bookingError: "Failed to book slot. Please try again.",
+    editError: "Failed to update reservation. Please try again.",
     cancellationError: "Failed to cancel booking. Please try again.",
     processing: "Processing...",
+    updating: "Updating...",
     schedule: "Schedule",
     admin: "Admin",
     selectRoom: "Select Room",
     currentRoom: "Current Room",
     room: "Room",
+    search: "Search",
+    searchPlaceholder: "Search by name, time, or day...",
+    clearSearch: "Clear Search",
+    noResults: "No results found",
+    showingResults: "Showing results for",
     accessRequired: "Access Code Required",
     accessRequiredForBooking: "Please enter the access code to make a reservation.",
     accessRequiredForCancellation: "Please enter the access code to cancel this reservation.",
+    accessRequiredForEdit: "Please enter the access code to edit this reservation.",
     duplicateWarning: "Similar Name Found",
     duplicateFound: "We found a similar booking:",
     duplicateFoundMultiple: "We found similar bookings:",
@@ -93,12 +104,14 @@ const translations = {
     totalSlots: "Total de Horarios",
     bookSlot: "Reservar Horario",
     bookingDetails: "Detalles de la Reserva",
+    editBooking: "Editar Reserva",
     fullName: "Nombre Completo",
     email: "Correo Electrónico",
     phone: "Número de Teléfono",
     notes: "Notas (Opcional)",
     specialRequests: "Cualquier solicitud especial o notas",
     book: "Reservar",
+    update: "Actualizar Reserva",
     cancel: "Cancelar",
     close: "Cerrar",
     cancelBooking: "Cancelar Reserva",
@@ -112,18 +125,27 @@ const translations = {
     loading: "Cargando horarios...",
     error: "Error al cargar horarios",
     bookingSuccess: "¡Horario reservado exitosamente!",
+    editSuccess: "¡Reserva actualizada exitosamente!",
     cancellationSuccess: "¡Reserva cancelada exitosamente!",
     bookingError: "Error al reservar horario. Por favor intente de nuevo.",
+    editError: "Error al actualizar reserva. Por favor intente de nuevo.",
     cancellationError: "Error al cancelar reserva. Por favor intente de nuevo.",
     processing: "Procesando...",
+    updating: "Actualizando...",
     schedule: "Horarios",
     admin: "Administración",
     selectRoom: "Seleccionar Sala",
     currentRoom: "Sala Actual",
     room: "Sala",
+    search: "Buscar",
+    searchPlaceholder: "Buscar por nombre, hora, o día...",
+    clearSearch: "Limpiar Búsqueda",
+    noResults: "No se encontraron resultados",
+    showingResults: "Mostrando resultados para",
     accessRequired: "Código de Acceso Requerido",
     accessRequiredForBooking: "Por favor ingrese el código de acceso para hacer una reserva.",
     accessRequiredForCancellation: "Por favor ingrese el código de acceso para cancelar esta reserva.",
+    accessRequiredForEdit: "Por favor ingrese el código de acceso para editar esta reserva.",
     duplicateWarning: "Nombre Similar Encontrado",
     duplicateFound: "Encontramos una reserva similar:",
     duplicateFoundMultiple: "Encontramos reservas similares:",
@@ -137,9 +159,11 @@ export default function PropheticRoomsScheduler() {
   const [selectedSlot, setSelectedSlot] = useState<{ dayId: string; slotId: string } | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
-  const [pendingAction, setPendingAction] = useState<'book' | 'cancel' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'book' | 'cancel' | 'edit' | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
   const [activeTab, setActiveTab] = useState("schedule")
+  const [searchTerm, setSearchTerm] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -156,6 +180,7 @@ export default function PropheticRoomsScheduler() {
     error, 
     bookSlot, 
     cancelBooking,
+    editBooking,
     findPotentialDuplicates
   } = useSchedule(language)
   
@@ -205,11 +230,17 @@ export default function PropheticRoomsScheduler() {
     }
     setSelectedSlot({ dayId, slotId })
     setDuplicates([])
+    setIsEditMode(false)
     setIsDialogOpen(true)
   }
 
   const handleBookSlotRequest = () => {
     setPendingAction('book')
+    setIsPasswordDialogOpen(true)
+  }
+
+  const handleEditBookingRequest = () => {
+    setPendingAction('edit')
     setIsPasswordDialogOpen(true)
   }
 
@@ -223,12 +254,18 @@ export default function PropheticRoomsScheduler() {
       handleBookSlot(authorName)
     } else if (pendingAction === 'cancel') {
       handleCancelBooking(authorName)
+    } else if (pendingAction === 'edit') {
+      setIsEditMode(true)
+      setIsDialogOpen(true)
+      // Store the author name for later use in edit
+      setFormData(prev => ({ ...prev, authorName }))
     }
     setPendingAction(null)
+    setIsPasswordDialogOpen(false)
   }
 
   const logAction = async (
-    action: 'book' | 'cancel',
+    action: 'book' | 'cancel' | 'edit',
     authorName: string,
     slotData?: {
       attendeeName?: string;
@@ -309,6 +346,49 @@ export default function PropheticRoomsScheduler() {
     setIsProcessing(false)
   }
 
+  const handleEditBooking = async () => {
+    if (!selectedSlot || !formData.name.trim() || !currentRoomId) return
+
+    const authorName = (formData as any).authorName || 'Unknown'
+
+    // Get the current attendee data before editing for logging
+    const day = schedule.find(d => d.id === selectedSlot.dayId);
+    const slot = day?.slots.find(s => s.id === selectedSlot.slotId);
+    const previousAttendee = slot?.attendee ? {
+      name: slot.attendee.name,
+      email: slot.attendee.email,
+      phone: slot.attendee.phone,
+      notes: slot.attendee.notes || '',
+    } : undefined;
+
+    setIsProcessing(true)
+    const success = await editBooking(currentRoomId, selectedSlot.dayId, selectedSlot.slotId, {
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      notes: formData.notes.trim(),
+    })
+
+    if (success) {
+      // Log the edit action
+      await logAction('edit', authorName, {
+        attendeeName: formData.name.trim(),
+        attendeeEmail: formData.email.trim(),
+        attendeePhone: formData.phone.trim(),
+        attendeeNotes: formData.notes.trim(),
+      }, previousAttendee);
+
+      toast.success(t.editSuccess)
+      setIsDialogOpen(false)
+      setSelectedSlot(null)
+      setIsEditMode(false)
+      setFormData({ name: "", email: "", phone: "", notes: "" })
+    } else {
+      toast.error(t.editError)
+    }
+    setIsProcessing(false)
+  }
+
   const handleCancelBooking = async (authorName: string) => {
     if (!selectedSlot || !currentRoomId) return
 
@@ -371,6 +451,39 @@ export default function PropheticRoomsScheduler() {
 
     return () => clearTimeout(timeoutId)
   }, [formData.name, currentSlot?.isBooked])
+
+  // Filter schedule data based on search term
+  const filterScheduleBySearch = (scheduleData: any[]) => {
+    if (!searchTerm.trim()) return scheduleData
+
+    const searchLower = searchTerm.toLowerCase().trim()
+    
+    return scheduleData.map(day => ({
+      ...day,
+      slots: day.slots.filter((slot: { time: string; isBooked: boolean; attendee?: { name: string } }) => {
+        // Search in time
+        const timeMatch = slot.time?.toLowerCase().includes(searchLower) || false
+        
+        // Search in day name and date
+        const dayMatch = day.dayName?.toLowerCase().includes(searchLower) || 
+                        day.date?.toLowerCase().includes(searchLower) || false
+        
+        // Search in attendee name if slot is booked
+        const nameMatch = slot.isBooked && slot.attendee?.name && 
+                         slot.attendee.name.toLowerCase().includes(searchLower)
+        
+        return timeMatch || dayMatch || nameMatch
+      })
+    })).filter(day => day.slots.length > 0) // Only show days that have matching slots
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }
+
+  const handleClearSearch = () => {
+    setSearchTerm("")
+  }
 
   if (loading) {
     return (
@@ -491,6 +604,38 @@ export default function PropheticRoomsScheduler() {
           </TabsList>
 
           <TabsContent value="schedule" className="space-y-6">
+            {/* Search Bar */}
+            <div className="max-w-md mx-auto">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="pl-10 pr-10"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title={t.clearSearch}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {searchTerm && (
+                <div className="mt-2 text-center text-sm text-gray-600">
+                  {filterScheduleBySearch(schedule).length > 0 ? (
+                    <span>{t.showingResults} "{searchTerm}"</span>
+                  ) : (
+                    <span className="text-gray-500">{t.noResults}</span>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Stats - Mobile Optimized */}
             <div className="grid grid-cols-3 gap-3 sm:gap-6 max-w-lg mx-auto mb-4">
               <div className="text-center bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-indigo-100">
@@ -518,7 +663,7 @@ export default function PropheticRoomsScheduler() {
 
             {/* Schedule Grid - Mobile Optimized */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-              {schedule.map((day) => (
+              {filterScheduleBySearch(schedule).map((day) => (
                 <Card key={day.id} className="shadow-lg">
                   <CardHeader className="bg-indigo-600 text-white p-4">
                     <CardTitle className="flex items-center gap-2 text-lg">
@@ -529,7 +674,7 @@ export default function PropheticRoomsScheduler() {
                   </CardHeader>
                   <CardContent className="p-3 sm:p-4">
                     <div className="grid gap-2">
-                      {day.slots.map((slot) => (
+                      {day.slots.map((slot: { id: string; time: string; isBooked: boolean; attendee?: { name: string } }) => (
                         <Button
                           key={slot.id}
                           variant={slot.isBooked ? "secondary" : "outline"}
@@ -579,12 +724,13 @@ export default function PropheticRoomsScheduler() {
           setIsDialogOpen(open)
           if (!open) {
             setDuplicates([]) // Clear duplicates when dialog is closed
+            setIsEditMode(false) // Reset edit mode when dialog is closed
           }
         }}>
           <DialogContent className="sm:max-w-md w-[95vw] sm:w-full max-w-[95vw] sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader className="pb-4">
               <DialogTitle className="text-base sm:text-lg font-semibold leading-tight">
-                {currentSlot?.isBooked ? t.bookingDetails : t.bookSlot}
+                {isEditMode ? t.editBooking : currentSlot?.isBooked ? t.bookingDetails : t.bookSlot}
               </DialogTitle>
               <DialogDescription className="text-xs sm:text-sm leading-relaxed">
                 {selectedDay && currentSlot && currentRoom && (
@@ -609,7 +755,7 @@ export default function PropheticRoomsScheduler() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder={t.enterFullName}
-                  disabled={currentSlot?.isBooked || isProcessing}
+                  disabled={(currentSlot?.isBooked && !isEditMode) || isProcessing}
                   className="text-base sm:text-sm h-11 sm:h-10"
                 />
                 
@@ -656,7 +802,7 @@ export default function PropheticRoomsScheduler() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder={t.enterEmail}
-                  disabled={currentSlot?.isBooked || isProcessing}
+                  disabled={(currentSlot?.isBooked && !isEditMode) || isProcessing}
                   className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
@@ -669,7 +815,7 @@ export default function PropheticRoomsScheduler() {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder={t.enterPhone}
-                  disabled={currentSlot?.isBooked || isProcessing}
+                  disabled={(currentSlot?.isBooked && !isEditMode) || isProcessing}
                   className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
@@ -681,7 +827,7 @@ export default function PropheticRoomsScheduler() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder={t.specialRequests}
-                  disabled={currentSlot?.isBooked || isProcessing}
+                  disabled={(currentSlot?.isBooked && !isEditMode) || isProcessing}
                   rows={2}
                   className="text-base sm:text-sm min-h-[60px] resize-none"
                 />
@@ -690,26 +836,62 @@ export default function PropheticRoomsScheduler() {
 
             <DialogFooter className="gap-3 pt-4 flex-col sm:flex-row">
               {currentSlot?.isBooked ? (
-                <>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsDialogOpen(false)}
-                    disabled={isProcessing}
-                    className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-2 sm:order-1"
-                  >
-                    {t.close}
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    onClick={handleCancelBookingRequest}
-                    disabled={isProcessing}
-                    className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-1 sm:order-2"
-                  >
-                    {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {isProcessing ? t.processing : t.cancelBooking}
-                  </Button>
-                </>
+                isEditMode ? (
+                  // Edit mode footer
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsEditMode(false)
+                        setIsDialogOpen(false)
+                      }}
+                      disabled={isProcessing}
+                      className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-2 sm:order-1"
+                    >
+                      {t.cancel}
+                    </Button>
+                    <Button 
+                      onClick={handleEditBooking} 
+                      disabled={!formData.name.trim() || isProcessing}
+                      className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-1 sm:order-2 bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {isProcessing ? t.updating : t.update}
+                    </Button>
+                  </>
+                ) : (
+                  // View mode footer for booked slots
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsDialogOpen(false)}
+                      disabled={isProcessing}
+                      className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-3 sm:order-1"
+                    >
+                      {t.close}
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      onClick={handleEditBookingRequest}
+                      disabled={isProcessing}
+                      className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-1 sm:order-2 bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {isProcessing ? t.processing : t.editBooking}
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleCancelBookingRequest}
+                      disabled={isProcessing}
+                      className="w-full sm:w-auto h-11 sm:h-10 text-base sm:text-sm order-2 sm:order-3"
+                    >
+                      {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {isProcessing ? t.processing : t.cancelBooking}
+                    </Button>
+                  </>
+                )
               ) : (
+                // Available slot footer
                 <>
                   <Button 
                     variant="outline" 
@@ -739,7 +921,7 @@ export default function PropheticRoomsScheduler() {
           onOpenChange={setIsPasswordDialogOpen}
           onSuccess={handlePasswordSuccess}
           title={t.accessRequired}
-          description={pendingAction === 'book' ? t.accessRequiredForBooking : t.accessRequiredForCancellation}
+          description={pendingAction === 'book' ? t.accessRequiredForBooking : pendingAction === 'cancel' ? t.accessRequiredForCancellation : t.accessRequiredForEdit}
           language={language}
           type={pendingAction || 'book'}
         />

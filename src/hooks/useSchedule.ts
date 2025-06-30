@@ -398,6 +398,53 @@ export const useSchedule = (language: 'en' | 'es') => {
     }
   };
 
+  // Edit a booking
+  const editBooking = async (
+    roomId: string,
+    dayId: string, 
+    slotId: string, 
+    attendeeData: {
+      name: string;
+      email: string;
+      phone: string;
+      notes?: string;
+    }
+  ) => {
+    try {
+      const scheduleRef = doc(db, 'rooms', roomId, 'schedule', dayId);
+      const room = rooms.find(r => r.id === roomId);
+      const dayData = room?.schedule.find(day => day.id === dayId);
+      
+      if (!dayData) throw new Error('Day not found');
+      
+      const updatedSlots = dayData.slots.map(slot => {
+        if (slot.id === slotId) {
+          // Keep the original booking timestamp when editing
+          const originalBookedAt = slot.attendee?.bookedAt || new Date().toISOString();
+          return {
+            ...slot,
+            isBooked: true,
+            attendee: {
+              ...attendeeData,
+              bookedAt: originalBookedAt,
+            }
+          };
+        }
+        return slot;
+      });
+
+      await updateDoc(scheduleRef, {
+        slots: updatedSlots
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error editing booking:', error);
+      setError('Failed to edit booking');
+      return false;
+    }
+  };
+
   // Get current room's schedule
   const currentRoom = rooms.find(r => r.id === currentRoomId);
   const schedule = currentRoom?.schedule || [];
@@ -491,6 +538,7 @@ export const useSchedule = (language: 'en' | 'es') => {
     error,
     bookSlot,
     cancelBooking,
+    editBooking,
     findPotentialDuplicates,
   };
 }; 

@@ -6,7 +6,7 @@ export interface LogEntry {
   id?: string;
   timestamp: any;
   author: string;
-  action: 'book' | 'cancel';
+  action: 'book' | 'cancel' | 'edit';
   roomId: string;
   roomName: string;
   dayId: string;
@@ -28,25 +28,46 @@ export interface LogEntry {
 
 export async function POST(request: NextRequest) {
   try {
-    const logData: Omit<LogEntry, 'id' | 'timestamp'> = await request.json();
+    const logData = await request.json();
     
-    // Add server timestamp to the log entry
-    const logEntry = {
-      ...logData,
+    // Validate required fields
+    if (!logData.author || !logData.action || !logData.roomId) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Create the log entry
+    const logEntry: Omit<LogEntry, 'id'> = {
       timestamp: serverTimestamp(),
+      author: logData.author,
+      action: logData.action,
+      roomId: logData.roomId,
+      roomName: logData.roomName || '',
+      dayId: logData.dayId || '',
+      dayName: logData.dayName || '',
+      date: logData.date || '',
+      slotId: logData.slotId || '',
+      slotTime: logData.slotTime || '',
+      attendeeName: logData.attendeeName,
+      attendeeEmail: logData.attendeeEmail,
+      attendeePhone: logData.attendeePhone,
+      attendeeNotes: logData.attendeeNotes,
+      previousAttendee: logData.previousAttendee,
     };
-    
-    // Save to Firebase
+
+    // Add to Firestore
     const docRef = await addDoc(collection(db, 'action_logs'), logEntry);
     
     return NextResponse.json({ 
       success: true, 
-      logId: docRef.id 
+      id: docRef.id 
     });
   } catch (error) {
-    console.error('Error saving log:', error);
+    console.error('Error logging action:', error);
     return NextResponse.json(
-      { error: 'Failed to save log' },
+      { error: 'Failed to log action' },
       { status: 500 }
     );
   }
