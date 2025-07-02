@@ -307,7 +307,17 @@ export const useSchedule = (language: 'en' | 'es') => {
         },
         (error) => {
           console.error(`Error fetching schedule for ${roomId}:`, error);
-          setError('Failed to load schedule');
+          
+          // More specific error handling
+          if (error.code === 'permission-denied') {
+            setError('Permission denied - Please check your Firestore rules');
+          } else if (error.code === 'unavailable') {
+            setError('Firebase service unavailable - Please check your internet connection');
+          } else if (error.code === 'unauthenticated') {
+            setError('Authentication required - Please check your Firebase configuration');
+          } else {
+            setError(`Failed to load schedule: ${error.message}`);
+          }
           setLoading(false);
         }
       );
