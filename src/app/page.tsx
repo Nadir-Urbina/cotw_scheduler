@@ -25,12 +25,11 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, User, Languages, Loader2, AlertCircle, Settings, DoorOpen, Info, Search, X } from "lucide-react"
+import { Calendar, Clock, User, Languages, Loader2, AlertCircle, DoorOpen, Info, Search, X, Settings } from "lucide-react"
 import { useSchedule } from "@/hooks/useSchedule"
-import { AdminPanel } from "@/components/AdminPanel"
 import { PasswordDialog } from "@/components/PasswordDialog"
 import { toast } from "sonner"
+import Link from "next/link"
 
 type Language = "en" | "es"
 
@@ -162,7 +161,6 @@ export default function PropheticRoomsScheduler() {
   const [pendingAction, setPendingAction] = useState<'book' | 'cancel' | 'edit' | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
-  const [activeTab, setActiveTab] = useState("schedule")
   const [searchTerm, setSearchTerm] = useState("")
   const [formData, setFormData] = useState({
     name: "",
@@ -535,19 +533,24 @@ export default function PropheticRoomsScheduler() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 md:mb-8">
-          {/* Top Controls - Mobile Optimized */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-            {/* Admin Panel - Hidden on small screens, shows as button */}
-            <div className="order-2 sm:order-1">
-              <AdminPanel language={language} />
+          {/* Top Controls - Responsive Layout */}
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6 max-w-4xl mx-auto">
+            {/* Admin Link - Responsive positioning */}
+            <div className="order-2 lg:order-1 lg:flex-shrink-0">
+              <Link href="/admin">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t.admin}</span>
+                </Button>
+              </Link>
             </div>
             
-            {/* Language Toggle */}
-            <div className="order-1 sm:order-2 flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm w-full sm:w-auto justify-center">
+            {/* Language Toggle - Centered on mobile, right on desktop */}
+            <div className="order-1 lg:order-2 flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm w-full sm:w-auto max-w-sm lg:max-w-none justify-center lg:justify-start lg:flex-shrink-0">
               <Languages className="w-4 h-4 text-gray-600 flex-shrink-0" />
               <span className="text-sm font-medium text-gray-700 whitespace-nowrap">{t.language}:</span>
               <div className="flex items-center gap-2">
@@ -562,18 +565,20 @@ export default function PropheticRoomsScheduler() {
             </div>
           </div>
 
-          {/* Main Title */}
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t.title}</h1>
-          <h2 className="text-xl md:text-2xl font-semibold text-indigo-600 mb-4">{t.subtitle}</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto text-sm md:text-base px-2">{t.description}</p>
+          {/* Main Title - Better centered on desktop */}
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">{t.title}</h1>
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-semibold text-indigo-600 mb-4">{t.subtitle}</h2>
+            <p className="text-gray-600 max-w-3xl mx-auto text-sm md:text-base lg:text-lg px-2 leading-relaxed">{t.description}</p>
+          </div>
 
-          {/* Room Selector - Mobile Optimized */}
+          {/* Room Selector - Centered */}
           <div className="flex justify-center mt-6">
-            <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm w-full max-w-sm sm:w-auto">
+            <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm w-full max-w-sm lg:max-w-md">
               <DoorOpen className="w-4 h-4 text-gray-600 flex-shrink-0" />
               <span className="text-sm font-medium text-gray-700 whitespace-nowrap">{t.currentRoom}:</span>
               <Select value={currentRoomId} onValueChange={handleRoomChange}>
-                <SelectTrigger className="w-24 sm:w-32">
+                <SelectTrigger className="w-24 sm:w-32 lg:w-40">
                   <SelectValue placeholder={t.selectRoom} />
                 </SelectTrigger>
                 <SelectContent>
@@ -588,22 +593,8 @@ export default function PropheticRoomsScheduler() {
           </div>
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="schedule" className="flex items-center gap-2 text-sm">
-              <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.schedule}</span>
-              <span className="sm:hidden">📅</span>
-            </TabsTrigger>
-            <TabsTrigger value="admin" className="flex items-center gap-2 text-sm">
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.admin}</span>
-              <span className="sm:hidden">⚙️</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="schedule" className="space-y-6">
+        {/* Main Content */}
+        <div className="space-y-6">
             {/* Search Bar */}
             <div className="max-w-md mx-auto">
               <div className="relative">
@@ -636,33 +627,33 @@ export default function PropheticRoomsScheduler() {
               )}
             </div>
 
-            {/* Stats - Mobile Optimized */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-6 max-w-lg mx-auto mb-4">
-              <div className="text-center bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-indigo-100">
-                <div className="text-xl sm:text-2xl font-bold text-indigo-600 mb-1">{getTotalBookedSlots()}</div>
-                <div className="text-xs sm:text-sm text-gray-600 font-medium">{t.booked}</div>
+            {/* Stats - Responsive Layout */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 max-w-lg lg:max-w-2xl mx-auto mb-4">
+              <div className="text-center bg-white rounded-lg p-3 sm:p-4 lg:p-6 shadow-sm border border-indigo-100">
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-indigo-600 mb-1">{getTotalBookedSlots()}</div>
+                <div className="text-xs sm:text-sm lg:text-base text-gray-600 font-medium">{t.booked}</div>
               </div>
-              <div className="text-center bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-green-100">
-                <div className="text-xl sm:text-2xl font-bold text-green-600 mb-1">{getTotalSlots() - getTotalBookedSlots()}</div>
-                <div className="text-xs sm:text-sm text-gray-600 font-medium">{t.available}</div>
+              <div className="text-center bg-white rounded-lg p-3 sm:p-4 lg:p-6 shadow-sm border border-green-100">
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-1">{getTotalSlots() - getTotalBookedSlots()}</div>
+                <div className="text-xs sm:text-sm lg:text-base text-gray-600 font-medium">{t.available}</div>
               </div>
-              <div className="text-center bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                <div className="text-xl sm:text-2xl font-bold text-gray-600 mb-1">{getTotalSlots()}</div>
-                <div className="text-xs sm:text-sm text-gray-600 font-medium">{t.totalSlots}</div>
+              <div className="text-center bg-white rounded-lg p-3 sm:p-4 lg:p-6 shadow-sm border border-gray-100">
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-600 mb-1">{getTotalSlots()}</div>
+                <div className="text-xs sm:text-sm lg:text-base text-gray-600 font-medium">{t.totalSlots}</div>
               </div>
             </div>
 
             {/* Current Room Indicator */}
             {currentRoom && (
               <div className="text-center">
-                <Badge variant="outline" className="text-base sm:text-lg px-3 py-2 sm:px-4">
+                <Badge variant="outline" className="text-base sm:text-lg lg:text-xl px-3 py-2 sm:px-4 lg:px-6">
                   {currentRoom.name}
                 </Badge>
               </div>
             )}
 
-            {/* Schedule Grid - Mobile Optimized */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Schedule Grid - Responsive Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 max-w-none lg:max-w-6xl mx-auto">
               {filterScheduleBySearch(schedule).map((day) => (
                 <Card key={day.id} className="shadow-lg">
                   <CardHeader className="bg-indigo-600 text-white p-4">
@@ -712,12 +703,7 @@ export default function PropheticRoomsScheduler() {
                 </Card>
               ))}
             </div>
-          </TabsContent>
-
-          <TabsContent value="admin">
-            <AdminPanel language={language} />
-          </TabsContent>
-        </Tabs>
+        </div>
 
         {/* Booking Dialog - Mobile Optimized */}
         <Dialog open={isDialogOpen} onOpenChange={(open) => {

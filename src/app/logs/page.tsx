@@ -36,7 +36,8 @@ import {
   Filter,
   BarChart3,
   Users,
-  Download
+  Download,
+  UserCheck
 } from "lucide-react";
 import Link from 'next/link';
 
@@ -44,7 +45,7 @@ interface LogEntry {
   id: string;
   timestamp: string;
   author: string;
-  action: 'book' | 'cancel' | 'edit';
+  action: 'book' | 'cancel' | 'edit' | 'checkin';
   roomId: string;
   roomName: string;
   dayId: string;
@@ -249,6 +250,13 @@ export default function LogsPage() {
           Edited
         </Badge>
       );
+    } else if (action === 'checkin') {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800">
+          <UserCheck className="w-3 h-3" />
+          Checked In
+        </Badge>
+      );
     }
     return null;
   };
@@ -343,6 +351,7 @@ export default function LogsPage() {
                   <SelectItem value="book">Bookings</SelectItem>
                   <SelectItem value="cancel">Cancellations</SelectItem>
                   <SelectItem value="edit">Edits</SelectItem>
+                  <SelectItem value="checkin">Check-ins</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -536,6 +545,18 @@ export default function LogsPage() {
                                 <div className="text-sm text-gray-500">
                                   {log.attendeePhone || log.previousAttendee?.phone}
                                 </div>
+                              )}
+                            </div>
+                          ) : log.action === 'checkin' && log.attendeeName ? (
+                            <div className="space-y-1">
+                              <div className="font-medium text-green-600">
+                                Checked In: {log.attendeeName}
+                              </div>
+                              {log.attendeeEmail && (
+                                <div className="text-sm text-gray-500">{log.attendeeEmail}</div>
+                              )}
+                              {log.attendeePhone && (
+                                <div className="text-sm text-gray-500">{log.attendeePhone}</div>
                               )}
                             </div>
                           ) : (

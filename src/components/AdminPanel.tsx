@@ -81,13 +81,20 @@ const translations = {
     actions: "Actions",
     edit: "Edit",
     delete: "Delete",
+    checkIn: "Check In",
+    checkOut: "Checked In",
     confirmDelete: "Confirm Delete",
+    confirmCheckIn: "Confirm Check-In",
+    checkInWarning: "Are you sure you want to check in this attendee?",
+    checkInConfirmText: "Check in:",
     deleteWarning: "Are you sure you want to delete this booking? This action cannot be undone.",
     cancel: "Cancel",
     bookingDeleted: "Booking deleted successfully",
     bookingUpdated: "Booking updated successfully",
+    checkedInSuccess: "Attendee checked in successfully",
     deleteError: "Failed to delete booking",
     updateError: "Failed to update booking",
+    checkInError: "Failed to check in attendee",
     exportData: "Export Data",
     viewLogs: "View Team Logs",
     editBooking: "Edit Booking",
@@ -108,6 +115,10 @@ const translations = {
     loading: "Loading...",
     room: "Room",
     acrossAllRooms: "Manage all conference bookings across all rooms",
+    checkedInAt: "Checked In At",
+    status: "Status",
+    checkedInStatus: "Checked In",
+    notCheckedInStatus: "Not Checked In",
   },
   es: {
     adminPanel: "Panel de Administración",
@@ -128,13 +139,20 @@ const translations = {
     actions: "Acciones",
     edit: "Editar",
     delete: "Eliminar",
+    checkIn: "Registrar Asistencia",
+    checkOut: "Asistió",
     confirmDelete: "Confirmar Eliminación",
+    confirmCheckIn: "Confirmar Asistencia",
+    checkInWarning: "¿Está seguro de que desea registrar la asistencia de este asistente?",
+    checkInConfirmText: "Asistió:",
     deleteWarning: "¿Está seguro de que desea eliminar esta reserva? Esta acción no se puede deshacer.",
     cancel: "Cancelar",
     bookingDeleted: "Reserva eliminada exitosamente",
     bookingUpdated: "Reserva actualizada exitosamente",
+    checkedInSuccess: "Asistencia registrada exitosamente",
     deleteError: "Error al eliminar la reserva",
     updateError: "Error al actualizar la reserva",
+    checkInError: "Error al registrar la asistencia",
     exportData: "Exportar Datos",
     viewLogs: "Ver Registros del Equipo",
     editBooking: "Editar Reserva",
@@ -155,6 +173,10 @@ const translations = {
     loading: "Cargando...",
     room: "Sala",
     acrossAllRooms: "Gestionar todas las reservas de la conferencia en todas las salas",
+    checkedInAt: "Asistió el",
+    status: "Estado",
+    checkedInStatus: "Asistió",
+    notCheckedInStatus: "No Asistió",
   },
 };
 
@@ -172,6 +194,12 @@ export function AdminPanel({ language }: AdminPanelProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [pendingCheckIn, setPendingCheckIn] = useState<{
+    roomId: string;
+    dayId: string;
+    slotId: string;
+    booking: any;
+  } | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
     email: '',
@@ -180,7 +208,7 @@ export function AdminPanel({ language }: AdminPanelProps) {
   });
 
   const { user, isStaff, signIn, logout } = useAuth();
-  const { rooms, cancelBooking, editBooking } = useSchedule(language);
+  const { rooms, cancelBooking, editBooking, checkInBooking } = useSchedule(language);
   const t = translations[language];
 
   const handleLogin = async () => {
@@ -208,6 +236,34 @@ export function AdminPanel({ language }: AdminPanelProps) {
       toast.success(t.bookingDeleted);
     } else {
       toast.error(t.deleteError);
+    }
+  };
+
+  const handleCheckIn = async (roomId: string, dayId: string, slotId: string, booking: any) => {
+    const success = await checkInBooking(roomId, dayId, slotId);
+    if (success) {
+      // Log the check-in action
+      await logCheckInAction(roomId, dayId, slotId, booking);
+      
+      toast.success(t.checkedInSuccess);
+      setPendingCheckIn(null); // Clear the confirmation state
+    } else {
+      toast.error(t.checkInError);
+    }
+  };
+
+  const handleCheckInClick = (roomId: string, dayId: string, slotId: string, booking: any) => {
+    setPendingCheckIn({ roomId, dayId, slotId, booking });
+  };
+
+  const handleConfirmCheckIn = () => {
+    if (pendingCheckIn) {
+      handleCheckIn(
+        pendingCheckIn.roomId,
+        pendingCheckIn.dayId,
+        pendingCheckIn.slotId,
+        pendingCheckIn.booking
+      );
     }
   };
 
@@ -294,6 +350,34 @@ export function AdminPanel({ language }: AdminPanelProps) {
       });
     } catch (error) {
       console.error('Failed to log edit action:', error);
+    }
+  };
+
+  const logCheckInAction = async (roomId: string, dayId: string, slotId: string, booking: any) => {
+    try {
+      await fetch('/api/log-action', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          author: user?.email || 'Unknown',
+          action: 'checkin',
+          roomId: roomId,
+          roomName: booking.roomName,
+          dayId: dayId,
+          dayName: booking.dayName,
+          date: booking.date,
+          slotId: slotId,
+          slotTime: booking.slot.time,
+          attendeeName: booking.slot.attendee?.name || 'Unknown',
+          attendeeEmail: booking.slot.attendee?.email || 'Unknown',
+          attendeePhone: booking.slot.attendee?.phone || 'Unknown',
+          attendeeNotes: booking.slot.attendee?.notes || 'Unknown',
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to log check-in action:', error);
     }
   };
 
@@ -431,172 +515,242 @@ export function AdminPanel({ language }: AdminPanelProps) {
   const allBookings = getAllBookings();
 
   return (
-    <div className="space-y-6">
-      {/* Admin Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{t.adminPanel}</h2>
-          <p className="text-gray-600">{t.welcome}, {user.email}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t.adminPanel}</h1>
+          <p className="text-sm sm:text-base text-gray-600">{t.welcome}, {user?.email}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Link href="/logs">
-            <Button variant="outline">
-              <FileText className="w-4 h-4 mr-2" />
-              {t.viewLogs}
+            <Button variant="outline" size="sm" className="w-full sm:w-auto h-10">
+              <FileText className="w-4 h-4 sm:mr-2" />
+              <span className="sm:inline">{t.viewLogs}</span>
             </Button>
           </Link>
-          <Button variant="outline" onClick={exportToCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            {t.exportData}
+          <Button onClick={exportToCSV} variant="outline" size="sm" className="w-full sm:w-auto h-10">
+            <Download className="w-4 h-4 sm:mr-2" />
+            <span className="sm:inline">{t.exportData}</span>
           </Button>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            {t.logout}
+          <Button onClick={handleLogout} variant="outline" size="sm" className="w-full sm:w-auto h-10">
+            <LogOut className="w-4 h-4 sm:mr-2" />
+            <span className="sm:inline">{t.logout}</span>
           </Button>
         </div>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.totalBookings}</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 sm:mb-6">
+        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-blue-700">{t.totalBookings}</CardTitle>
+            <User className="h-5 w-5 text-blue-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{getTotalBookedSlots()}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="pb-3">
+            <div className="text-2xl sm:text-3xl font-bold text-blue-800">{getTotalBookedSlots()}</div>
+            <p className="text-xs text-blue-600 mt-1">
               Across {rooms.length} rooms
             </p>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.availableSlots}</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-green-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-green-700">{t.availableSlots}</CardTitle>
+            <Clock className="h-5 w-5 text-green-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{getTotalSlots() - getTotalBookedSlots()}</div>
-            <p className="text-xs text-muted-foreground">
-              Across {rooms.length} rooms
+          <CardContent className="pb-3">
+            <div className="text-2xl sm:text-3xl font-bold text-green-800">{getTotalSlots() - getTotalBookedSlots()}</div>
+            <p className="text-xs text-green-600 mt-1">
+              Available spots
             </p>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.totalSlots}</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+
+        <Card className="border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 sm:col-span-2 lg:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-gray-700">{t.totalSlots}</CardTitle>
+            <Calendar className="h-5 w-5 text-gray-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{getTotalSlots()}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="pb-3">
+            <div className="text-2xl sm:text-3xl font-bold text-gray-800">{getTotalSlots()}</div>
+            <p className="text-xs text-gray-600 mt-1">
               {rooms.length} rooms × 3 days
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* All Bookings Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.allBookings}</CardTitle>
-          <CardDescription>
+      {/* All Bookings - Mobile Responsive */}
+      <Card className="shadow-lg border-t-4 border-t-indigo-500">
+        <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calendar className="w-5 h-5" />
+            {t.allBookings}
+          </CardTitle>
+          <CardDescription className="text-indigo-100">
             {t.acrossAllRooms}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t.room}</TableHead>
-                  <TableHead>{t.day}</TableHead>
-                  <TableHead>{t.time}</TableHead>
-                  <TableHead>{t.name}</TableHead>
-                  <TableHead>{t.email}</TableHead>
-                  <TableHead>{t.phone}</TableHead>
-                  <TableHead>{t.notes}</TableHead>
-                  <TableHead>{t.bookedAt}</TableHead>
-                  <TableHead>{t.actions}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allBookings.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                      No bookings yet
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  allBookings.map((booking, index) => (
-                    <TableRow key={`${booking.roomId}-${booking.dayId}-${booking.slot.id}`}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <DoorOpen className="w-4 h-4 text-gray-500" />
-                          <span className="font-medium">{booking.roomName}</span>
+        <CardContent className="p-0">
+          {allBookings.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <div className="flex flex-col items-center gap-2">
+                <Calendar className="w-8 h-8 text-gray-300" />
+                <span>No bookings yet</span>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {allBookings.map((booking, index) => (
+                <div 
+                  key={`${booking.roomId}-${booking.dayId}-${booking.slot.id}`}
+                  className="p-4 sm:p-6 hover:bg-gray-50 transition-colors border-l-4 border-l-transparent hover:border-l-indigo-500"
+                >
+                  {/* Mobile Layout */}
+                  <div className="space-y-4">
+                    {/* Header with Room and Status */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <DoorOpen className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 text-base truncate">{booking.roomName}</div>
+                          <div className="text-sm text-gray-500">{booking.dayName}</div>
+                          <div className="text-xs text-gray-400">{booking.date}</div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{booking.dayName}</div>
-                          <div className="text-sm text-gray-500">{booking.date}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        <Badge variant="outline" className="text-xs font-medium">{booking.slot.time}</Badge>
+                        {booking.slot.attendee?.checkedIn ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 text-xs">
+                            <UserCheck className="w-3 h-3 mr-1" />
+                            {t.checkedInStatus}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-xs">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {t.notCheckedInStatus}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Attendee Information */}
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <User className="w-5 h-5 text-gray-500" />
+                        <span className="font-medium text-gray-900 text-base">{booking.slot.attendee?.name}</span>
+                      </div>
+                      {booking.slot.attendee?.email && (
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          <Mail className="w-4 h-4 text-gray-400" />
+                          <span className="break-all">{booking.slot.attendee.email}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{booking.slot.time}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{booking.slot.attendee?.name}</TableCell>
-                      <TableCell>{booking.slot.attendee?.email}</TableCell>
-                      <TableCell>{booking.slot.attendee?.phone}</TableCell>
-                      <TableCell className="max-w-xs truncate">{booking.slot.attendee?.notes}</TableCell>
-                      <TableCell>
-                        {booking.slot.attendee?.bookedAt 
-                          ? new Date(booking.slot.attendee.bookedAt).toLocaleString()
-                          : '-'
-                        }
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleEditBookingClick(booking.roomId, booking.dayId, booking.slot.id, booking)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>{t.confirmDelete}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {t.deleteWarning}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteBooking(booking.roomId, booking.dayId, booking.slot.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  {t.delete}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                      )}
+                      {booking.slot.attendee?.phone && (
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          <Phone className="w-4 h-4 text-gray-400" />
+                          <span>{booking.slot.attendee.phone}</span>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                      )}
+                      {booking.slot.attendee?.notes && (
+                        <div className="flex items-start gap-3 text-sm text-gray-600">
+                          <FileText className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <span className="break-words">{booking.slot.attendee.notes}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-gray-500 pt-1 border-t border-gray-200">
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        <span>
+                          {booking.slot.attendee?.bookedAt 
+                            ? new Date(booking.slot.attendee.bookedAt).toLocaleString()
+                            : '-'
+                          }
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      {/* Check-in Button - Most Prominent */}
+                      {booking.slot.attendee?.checkedIn ? (
+                        <div className="flex items-center gap-2 text-green-600 text-base font-medium px-4 py-3 bg-green-50 rounded-lg justify-center border border-green-200">
+                          <UserCheck className="w-5 h-5" />
+                          <span>Checked In</span>
+                        </div>
+                      ) : (
+                        <Button 
+                          variant="default" 
+                          size="lg"
+                          onClick={() => handleCheckInClick(booking.roomId, booking.dayId, booking.slot.id, booking)}
+                          className="bg-green-600 hover:bg-green-700 text-white h-12 text-base font-medium sm:flex-1"
+                        >
+                          <UserCheck className="w-5 h-5 mr-2" />
+                          {t.checkIn}
+                        </Button>
+                      )}
+                      
+                      <div className="flex gap-3 sm:gap-2">
+                        {/* Edit Button */}
+                        <Button 
+                          variant="outline" 
+                          size="lg"
+                          onClick={() => handleEditBookingClick(booking.roomId, booking.dayId, booking.slot.id, booking)}
+                          className="border-blue-200 text-blue-600 hover:bg-blue-50 h-12 flex-1 sm:flex-none sm:w-12 sm:px-0"
+                        >
+                          <Edit className="w-5 h-5 sm:w-4 sm:h-4" />
+                          <span className="sm:hidden ml-2">Edit</span>
+                        </Button>
+                        
+                        {/* Delete Button */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="lg"
+                              className="border-red-200 text-red-600 hover:bg-red-50 h-12 flex-1 sm:flex-none sm:w-12 sm:px-0"
+                            >
+                              <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
+                              <span className="sm:hidden ml-2">Delete</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="mx-4 sm:mx-auto">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-lg">{t.confirmDelete}</AlertDialogTitle>
+                              <AlertDialogDescription className="text-base">
+                                {t.deleteWarning}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                              <AlertDialogCancel className="w-full sm:w-auto h-12 sm:h-10">{t.cancel}</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteBooking(booking.roomId, booking.dayId, booking.slot.id)}
+                                className="bg-red-600 hover:bg-red-700 w-full sm:w-auto h-12 sm:h-10"
+                              >
+                                {t.delete}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Summary Footer */}
+          <div className="p-4 bg-gray-50 border-t">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <p className="text-sm text-gray-600">
+                {allBookings.length} total bookings
+              </p>
+              <p className="text-sm text-green-600 font-medium">
+                {allBookings.filter(b => b.slot.attendee?.checkedIn).length} checked in
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -680,6 +834,47 @@ export function AdminPanel({ language }: AdminPanelProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Check In Confirmation Dialog */}
+      <AlertDialog open={!!pendingCheckIn} onOpenChange={() => setPendingCheckIn(null)}>
+        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-green-700 text-lg">
+              <UserCheck className="w-5 h-5" />
+              {t.confirmCheckIn}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-base">
+              <div>{t.checkInWarning}</div>
+              {pendingCheckIn && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="font-medium text-green-800 flex items-center gap-2 mb-2">
+                    <User className="w-4 h-4" />
+                    {t.checkInConfirmText} {pendingCheckIn.booking.slot.attendee?.name}
+                  </div>
+                  <div className="text-sm text-green-600">
+                    {pendingCheckIn.booking.roomName} • {pendingCheckIn.booking.dayName} • {pendingCheckIn.booking.slot.time}
+                  </div>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <AlertDialogCancel 
+              onClick={() => setPendingCheckIn(null)}
+              className="w-full sm:w-auto h-12 sm:h-10"
+            >
+              {t.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmCheckIn} 
+              className="bg-green-600 hover:bg-green-700 focus:ring-green-500 w-full sm:w-auto h-12 sm:h-10"
+            >
+              <UserCheck className="w-4 h-4 mr-2" />
+              {t.checkIn}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

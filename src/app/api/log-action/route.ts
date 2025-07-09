@@ -6,7 +6,7 @@ export interface LogEntry {
   id?: string;
   timestamp: any;
   author: string;
-  action: 'book' | 'cancel' | 'edit';
+  action: 'book' | 'cancel' | 'edit' | 'checkin';
   roomId: string;
   roomName: string;
   dayId: string;

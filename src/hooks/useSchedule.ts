@@ -22,6 +22,8 @@ export interface TimeSlot {
     phone: string;
     notes?: string;
     bookedAt: string;
+    checkedIn?: boolean;
+    checkedInAt?: string;
   };
 }
 
@@ -455,6 +457,41 @@ export const useSchedule = (language: 'en' | 'es') => {
     }
   };
 
+  // Check in a booking
+  const checkInBooking = async (roomId: string, dayId: string, slotId: string) => {
+    try {
+      const scheduleRef = doc(db, 'rooms', roomId, 'schedule', dayId);
+      const room = rooms.find(r => r.id === roomId);
+      const dayData = room?.schedule.find(day => day.id === dayId);
+      
+      if (!dayData) throw new Error('Day not found');
+      
+      const updatedSlots = dayData.slots.map(slot => {
+        if (slot.id === slotId && slot.attendee) {
+          return {
+            ...slot,
+            attendee: {
+              ...slot.attendee,
+              checkedIn: true,
+              checkedInAt: new Date().toISOString(),
+            }
+          };
+        }
+        return slot;
+      });
+
+      await updateDoc(scheduleRef, {
+        slots: updatedSlots
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error checking in booking:', error);
+      setError('Failed to check in booking');
+      return false;
+    }
+  };
+
   // Get current room's schedule
   const currentRoom = rooms.find(r => r.id === currentRoomId);
   const schedule = currentRoom?.schedule || [];
@@ -549,6 +586,7 @@ export const useSchedule = (language: 'en' | 'es') => {
     bookSlot,
     cancelBooking,
     editBooking,
+    checkInBooking,
     findPotentialDuplicates,
   };
 }; 
