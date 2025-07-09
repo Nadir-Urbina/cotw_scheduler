@@ -389,12 +389,7 @@ export default function AdminPage() {
     checkInBooking
   } = useSchedule(language);
 
-  // Temporary debug info (remove after fixing)
-  const debugFirebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.slice(0, 10) + '...',
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  };
+
 
   const t = translations[language];
 
@@ -424,18 +419,13 @@ export default function AdminPage() {
   const handleLogin = async () => {
     setIsLoggingIn(true);
     try {
-      console.log('Attempting login with:', { email: loginEmail, projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID });
       await signIn(loginEmail, loginPassword);
       setIsLoginOpen(false);
       setLoginEmail('');
       setLoginPassword('');
     } catch (error: any) {
-      console.error('Login error details:', {
-        code: error.code,
-        message: error.message,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      });
-      toast.error(t.loginError + ': ' + error.message);
+      console.error('Authentication error:', error.code, error.message);
+      toast.error(t.loginError);
     }
     setIsLoggingIn(false);
   };
@@ -699,12 +689,6 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
-          {/* Temporary Debug Info - Remove after fixing */}
-          <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded">
-            <h3 className="font-bold">Debug Info:</h3>
-            <pre className="text-xs">{JSON.stringify(debugFirebaseConfig, null, 2)}</pre>
-          </div>
-          
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6 max-w-4xl mx-auto">
